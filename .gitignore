@@ -1,7 +1,7 @@
 .tmp_*
 *.osm.pbf
 *.nominatim.tgz
-*.graph.tgz
+*.graph.tar
 *.mbtiles
 **/.DS_Store
 .*_cid

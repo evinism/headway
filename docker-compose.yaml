@@ -15,6 +15,7 @@ services:
     image: headway_graphhopper
     volumes:
     - "headway_graphhopper_vol:/graph_volume"
+    mem_limit: 8G
   nginx:
     image: headway_nginx
     ports:

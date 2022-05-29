@@ -18,4 +18,4 @@ ENTRYPOINT [ "/graphhopper/startup.sh" ]
 
 EXPOSE 8989
 
-CMD [ "-jar", "-Xmx6g", "-Xms6g", "/graphhopper/graphhopper-web-5.3.jar", "serve", "/graphhopper/config.yaml" ]
+CMD [ "-jar", "-Xmx8g", "-Xms8g", "-jar", "/graphhopper/graphhopper-web-5.3.jar", "serve", "/graphhopper/config.yaml" ]

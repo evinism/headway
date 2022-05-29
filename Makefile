@@ -128,7 +128,7 @@ list:
 	cp $(basename $(basename $@)).osm.pbf ./geocoder/nominatim/data.osm.pbf
 	docker build ./geocoder/nominatim --tag headway_nominatim
 
-%.graph.tgz: %.osm.pbf %.gtfs.tar
+%.graph.tar: %.osm.pbf %.gtfs.tar
 	@echo "Pre-generating graphhopper graph for $(basename $(basename $@))."
 	docker build ./graphhopper --tag headway_graphhopper_build_image
 	mkdir -p ./.tmp_graphhopper
@@ -144,12 +144,12 @@ list:
 	bash -c 'docker cp $(basename $(basename $@)).osm.pbf $$(<.graphhopper_build_cid):/headway_graphhopper_build/data.osm.pbf'
 	bash -c 'docker cp $(basename $(basename $@)).gtfs.tar $$(<.graphhopper_build_cid):/headway_graphhopper_build/gtfs.tar'
 	-bash -c 'docker kill $$(<.graphhopper_build_cid) || echo "container is not running"'
-	docker run --memory=6G -it --rm \
+	docker run --memory=8G -it --rm \
 		-v headway_graphhopper_build:/graph_volume \
 		headway_graphhopper_build_image \
 		/graphhopper/startup.sh \
-		-Xmx4g \
-		-Xms4g \
+		-Xmx8g \
+		-Xms8g \
 		-jar \
 		/graphhopper/graphhopper-web-5.3.jar \
 		import \
@@ -159,13 +159,13 @@ list:
 	docker run --rm \
 		-v headway_graphhopper_build:/headway_graphhopper_build \
 		alpine:3 \
-		/bin/sh -c 'rm -f /headway_graphhopper_build/graph.tgz && cd /headway_graphhopper_build && tar -czf graph.tgz *'
+		/bin/sh -c 'rm -f /headway_graphhopper_build/graph.tar && cd /headway_graphhopper_build && tar -cf graph.tar *'
 	docker run -d --rm --name headway_graphhopper_ephemeral_busybox_build \
 		-v headway_graphhopper_build:/headway_graphhopper_build \
 		busybox \
 		sleep 1000
 	docker ps -aqf "name=headway_graphhopper_ephemeral_busybox_build" > .graphhopper_build_cid
-	bash -c 'docker cp $$(<.graphhopper_build_cid):/headway_graphhopper_build/graph.tgz $@'
+	bash -c 'docker cp $$(<.graphhopper_build_cid):/headway_graphhopper_build/graph.tar $@'
 	-bash -c 'docker kill $$(<.graphhopper_build_cid) || echo "container is not running"'
 	rm -rf ./.tmp_graphhopper/*
 
@@ -177,7 +177,7 @@ list:
 %.tag_images: %.tileserver_image %.photon_image %.nginx_image %.nominatim_image graphhopper_image
 	@echo "Tagging images"
 
-%.graphhopper_volume: %.graph.tgz graphhopper_image
+%.graphhopper_volume: %.graph.tar graphhopper_image
 	@echo "Create volume, then delete, then create, to force failures if the volume is in use."
 	-docker volume create headway_graphhopper_vol
 	docker volume rm -f headway_graphhopper_vol
@@ -189,18 +189,18 @@ list:
 		sleep 1000
 
 	-docker ps -aqf "name=headway_graphhopper_ephemeral_busybox_tag" > .graphhopper_cid
-	bash -c 'docker cp $(basename $@).graph.tgz $$(<.graphhopper_cid):/headway_graphhopper/graph.tgz'
+	bash -c 'docker cp $(basename $@).graph.tar $$(<.graphhopper_cid):/headway_graphhopper/graph.tar'
 	-bash -c 'docker kill $$(<.graphhopper_cid) || echo "container is not running"'
 
 	docker run --rm \
 		-v headway_graphhopper_vol:/headway_graphhopper \
 		alpine:3 \
-		/bin/sh -c 'cd /headway_graphhopper && tar -xvf graph.tgz && rm graph.tgz'
+		/bin/sh -c 'cd /headway_graphhopper && tar -xvf graph.tar && rm graph.tar'
 
 %.tag_volumes: %.graphhopper_volume
 	@echo "Tagged volumes"
 
-$(filter %,$(CITIES)): %: %.osm.pbf %.nominatim.tgz %.mbtiles %.graph.tgz %.gtfs.tar %.tag_images %.tag_volumes
+$(filter %,$(CITIES)): %: %.osm.pbf %.nominatim.tgz %.mbtiles %.graph.tar %.gtfs.tar %.tag_images %.tag_volumes
 	@echo "Building $@"
 
 clean:
@@ -211,7 +211,7 @@ clean:
 	rm -rf ./.tmp_geocoder/*
 	rm -rf ./.*_cid
 
-%.up: % %.osm.pbf %.nominatim.tgz %.mbtiles %.graph.tgz %.gtfs.tar %.tag_images %.tag_volumes
+%.up: % %.osm.pbf %.nominatim.tgz %.mbtiles %.graph.tar %.gtfs.tar %.tag_images %.tag_volumes
 	docker-compose kill || echo "Containers not up"
 	docker-compose down || echo "Containers dont exist"
 	docker-compose up -d
