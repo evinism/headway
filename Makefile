@@ -144,12 +144,12 @@ list:
 	bash -c 'docker cp $(basename $(basename $@)).osm.pbf $$(<.graphhopper_build_cid):/headway_graphhopper_build/data.osm.pbf'
 	bash -c 'docker cp $(basename $(basename $@)).gtfs.tar $$(<.graphhopper_build_cid):/headway_graphhopper_build/gtfs.tar'
 	-bash -c 'docker kill $$(<.graphhopper_build_cid) || echo "container is not running"'
-	docker run --memory=8G -it --rm \
+	docker run --memory=7G -it --rm \
 		-v headway_graphhopper_build:/graph_volume \
 		headway_graphhopper_build_image \
 		/graphhopper/startup.sh \
-		-Xmx8g \
-		-Xms8g \
+		-Xmx6g \
+		-XX:+UnlockExperimentalVMOptions -XX:+UseZGC \
 		-jar \
 		/graphhopper/graphhopper-web-5.3.jar \
 		import \

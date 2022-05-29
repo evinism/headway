@@ -78,8 +78,6 @@ graphhopper:
   profiles_ch:
     - profile: car
     - profile: bicycle
-    - profile: foot
-    - profile: wheelchair
   #   - profile: car_with_turn_costs
 
   # Hybrid mode:
