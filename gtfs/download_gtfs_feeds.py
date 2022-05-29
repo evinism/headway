@@ -1,5 +1,6 @@
 import sys
 from urllib.request import urlopen
+import requests
 
 def extract_column(name_row, data_row, wanted_column):
   try:
@@ -27,6 +28,10 @@ def gtfs_line_intersects(name_row, data_row, bbox):
   max_lat = extract_column_float(name_row, data_row, 'location.bounding_box.maximum_latitude')
 
   if min_long is None or max_long is None or min_lat is None or max_lat is None:
+    return False
+
+  if max_lat - min_lat > 10 or max_long-min_long > 10:
+    # This almost certainly just means the transit provider operates "everywhere".
     return False
 
   # Thers's probably a better way to do this but it's a sunday morning and I haven't had coffee yet.
@@ -57,11 +62,11 @@ gtfs_lines = [line.strip().split(',') for line in gtfs_feed_text.split('\n')]
 gtfs_name_line = gtfs_lines[0]
 gtfs_data_lines = gtfs_lines[1:]
 
-# extract_column(gtfs_name_line, line, 'provider')
-
-
 matching_lines = [line for line in gtfs_data_lines if gtfs_line_intersects(gtfs_name_line, line, bbox)]
 
 for line in matching_lines:
-  print(line)
-  print(extract_column(gtfs_name_line, line, 'provider'))
+  if extract_column(gtfs_name_line, line, 'data_type') == 'gtfs':
+    dl_url = extract_column(gtfs_name_line, line, 'urls.latest')
+    print("Downloading feed for", extract_column(gtfs_name_line, line, 'provider'))
+    with open('/gtfs_volume/' + extract_column(gtfs_name_line, line, 'mdb_source_id') + '.zip', 'wb') as f:
+        f.write(requests.get(dl_url).content)
